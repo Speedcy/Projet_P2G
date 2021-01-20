@@ -1,4 +1,5 @@
 figure()
+set(gcf,'Color','white')
 % reseau
 plot([2 0],[0 4],'color','black')
 hold on;
@@ -10,8 +11,10 @@ plot([3 4],[7 9],'color','black')
 plot([4 2],[9 11],'color','black')
 plot([1 2],[13 11],'color','black')
 %point
-X=[2 5 0 4 3 4 2 1];    
-Y=[0 0 4 5 7 9 11 13];
+% 1: Damery 2: Cubry 3: Vertus 4: Aulnay 5: Fère 6: Arcis 7: Méry 8:
+% Sézanne
+X=[1 2 4 3 4 5 2 0];    
+Y=[13 11 9 7 5 0 0 4];
 scatter(X,Y,[],'black','filled')
 %nom
 text(2+0.2,0+0.5, 'Mery')
@@ -34,5 +37,5 @@ line_plot=["plot([1 2],[13 11],'color','red','linewidth',2)"
     "plot([2 0],[0 4],'color','red','linewidth',2)"
     "plot([0 4],[4 5],'color','red','linewidth',2)"];
 
-value_plot_x=[0 1.5 4 1.5 4.75 3 1.3 2];
+value_plot_x=[0.25 1.8 4 2 4.75 3 1.3 2];
 value_plot_y=[11.5 9.5 8 6 2.5 0.8 2 4];

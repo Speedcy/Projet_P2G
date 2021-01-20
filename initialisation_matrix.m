@@ -96,13 +96,9 @@ elseif season==1%Summer case
 end
 
 %generate random figures
-%conso_elec_normalised = normrnd(mu_conso_elec, sigma_conso_elec);
-%cons_gaz_normalised = lognrnd(mu_conso_gaz, sigma_conso_gaz);
-%load_factor = betarnd(alpha_load_factor, beta_load_factor)+0.02;
-
-conso_elec_normalised=1.0785;
-cons_gaz_normalised=2.0825;
-load_factor=0.9;
+conso_elec_normalised = normrnd(mu_conso_elec, sigma_conso_elec);
+cons_gaz_normalised = lognrnd(mu_conso_gaz, sigma_conso_gaz);
+load_factor = betarnd(alpha_load_factor, beta_load_factor)+0.02;
 
 %simplify naming for readability
 alpha = load_factor;
@@ -177,6 +173,8 @@ disp(['Perte totale (MW) = ', num2str(loss)])
 surplus = -result.gen(1,PG);
 disp(['Surplus électrique (MW) = ', num2str(surplus)])
 
+Z=readtable('z.csv');
+I=(tot./Z.Z).^(1/2)
 
 %Diagramme d'admissibilité
 
