@@ -49,7 +49,7 @@ for limit=limit_elec
     i=i+1; 
 end
 
-disp(strcat('Consommation électrique limite :',num2str(X(tranche))))
+disp(strcat("Consommation électrique limite : ",num2str(X(tranche))))
 
 conso_elec_normalised=X(tranche);
 
@@ -101,7 +101,7 @@ for limit=limit_eolien
     i=i+1; 
 end
 
-disp(strcat('Facteur de charge éolien limite : ',num2str(X(tranche))))
+disp(strcat("Facteur de charge éolien limite : ",num2str(X(tranche))))
 
 load_factor=X(tranche);
 
