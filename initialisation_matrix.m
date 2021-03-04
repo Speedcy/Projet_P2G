@@ -252,7 +252,6 @@ end
 
 %Add PtG consumption in Mery
 
-
 mpc.bus(7,PD) = beta*C_mery+power_ptg;
 mpc.bus(7,QD) = mpc.bus(7,PD)*tan(acos(cos_phi));
 
@@ -328,6 +327,10 @@ fclose(file);
 
 Pressions_Result=out_gaz.Pressions;
 Debit_Result=out_gaz.Debits;
+
+pression_max=max(max(Pressions_Result))/10^5 % Pression maximale en bar atteinte dans les conduites
+pourcentage_supression=(pression_max-16)/16 % Surpression macimale exprimée en pourcentage de la pression nominale
+debit_sortie_ch4=max(Debit_Result.Data(:,2)) % Débit de gaz en sortie du PtG en kgCH4/s
 
 figure;
 plot(Pressions_Result.Time,Pressions_Result.Data/(10^5), 'LineWidth',2)
