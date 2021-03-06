@@ -254,7 +254,7 @@ I=((pertes*10^6)./(mpc.branch(:,BR_R)*81)).^(0.5)/3; % courant de lignes
 L_ligne=mpc.branch(:,3)/0.0018; % longueur des lignes
 r_ligne=0.0018*ones(length(I),1);
 I_nom=max_I(season+1)*ones(length(I),1); % courant nominal de ligne
-lignes_data=readtable('data_lignes.csv'); % données sur les lignes de diamètre supérieur à 228mm
+lignes_data=readtable('data_lignes.csv');
 lignes_data.I_max=max_I(season+1)*(1+lignes_data.EvolutionDeIParRapport_Ref228mm_);
 
 % Schéma de la situation initiale sans P2G
