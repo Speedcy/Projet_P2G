@@ -1,5 +1,6 @@
 plot_reseau
 Z_conso=[15068 39082 21557 7487 6218 11827 10200 21870];
+
 % Taille des points à la bonne échelle
 a_conso=(200-40)/(40000-5000);
 b_conso=40-5000*a_conso;

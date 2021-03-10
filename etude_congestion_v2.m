@@ -15,9 +15,9 @@ margin=0.05;
 ecretement=1; % Production effectivement injectée sur le réseau, le reste étant écrété (1=100%, 0.5=50%...)
 cout_ligne_unitaire=0.65; % Cout renforcement ligne pour une section 228mm² (M€/km) 
 cout_transfo_unitaire=0.14; % Cout renforcement transfo (M€/MVA)
-puissance_max_ptg=20.0;
+puissance_max_ptg=40.0;
 modif_ligne=1; % 0: sans modification des paramètres de lignes 1: avec modification
-affichage_detail=1; % 0: affichage itération initiale et finale 1: affichage détaillé de toutes les itérations
+affichage_detail=0; % 0: affichage itération initiale et finale 1: affichage détaillé de toutes les itérations
 
 %Generate Monte-Carlo season
 season = 0%randi([0 1]);%0-Winter; 1-Summer
@@ -29,7 +29,7 @@ reactive_frac=[];
 volt=[];
 tab=[];
 elec_surplus=[];
-max_I=[700 550]; % Maximal current in winter and summer
+max_I=[648.6 519.5]; % Maximal current in winter and summer
 
 %Installed wind power (MW)
 G_damery = 0*ecretement;
@@ -254,8 +254,13 @@ I=((pertes*10^6)./(mpc.branch(:,BR_R)*81)).^(0.5)/3; % courant de lignes
 L_ligne=mpc.branch(:,3)/0.0018; % longueur des lignes
 r_ligne=0.0018*ones(length(I),1);
 I_nom=max_I(season+1)*ones(length(I),1); % courant nominal de ligne
-lignes_data=readtable('data_lignes.csv'); % données sur les lignes de diamètre supérieur à 228mm
-lignes_data.I_max=max_I(season+1)*(1+lignes_data.EvolutionDeIParRapport_Ref228mm_);
+lignes_data=readtable('data_lignes_v2.csv'); % données sur les lignes de diamètre supérieur à 228mm
+if season==0
+    lignes_data.I_max=lignes_data.Intensit_DeCourantAdmissibleHiver_A_;
+elseif season==1
+    lignes_data.I_max=lignes_data.Intensit_DeCourantAdmissibleEte_A_;
+end
+%lignes_data.I_max=max_I(season+1)*(1+lignes_data.EvolutionDeIParRapport_Ref228mm_);
 
 % Schéma de la situation initiale sans P2G
 
@@ -394,8 +399,8 @@ I2=((pertes2*10^6)./(mpc.branch(:,BR_R)*81)).^(0.5)/3;
 L_ligne=mpc.branch(:,3)/0.0018; % longueur des lignes
 r_ligne=0.0018*ones(length(I2),1);
 I_nom=max_I(season+1)*ones(length(I2),1); % courant nominal de ligne
-lignes_data=readtable('data_lignes.csv');
-lignes_data.I_max=max_I(season+1)*(1+lignes_data.EvolutionDeIParRapport_Ref228mm_);
+%lignes_data=readtable('data_lignes.csv');
+%lignes_data.I_max=max_I(season+1)*(1+lignes_data.EvolutionDeIParRapport_Ref228mm_);
 
 % Schéma initial avec P2G
 
@@ -442,7 +447,7 @@ while sum(I2>I_nom)>0 % Si congestion
         mpc.branch(:,3)=L_ligne.*r_ligne; % modification des résistances de ligne
         % modification des réactances de ligne
         result2 = runpf(mpc); % simulation avec les nouveaux paramètres de ligne
-        ajustement_tension % ajustement de la puissance réactive pour la nouvelle simulation
+        %ajustement_tension % ajustement de la puissance réactive pour la nouvelle simulation
         pertes2=result2.branch(:,PF)+result2.branch(:,PT);
         I2=((pertes2*10^6)./(mpc.branch(:,BR_R)*81)).^(0.5)/3; % calcul des nouveaux courants de ligne
     end
