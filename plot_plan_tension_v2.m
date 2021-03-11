@@ -7,6 +7,7 @@ for z=1:8
 end
 C=Z*90;
 P=Z*200/0.12-1483.3;
+P(P<=20)=20; %Si la tension est vraiment trop basse on cap pour éviter une erreur
 for z=1:8
     if 0.95<=Z(z) && Z(z)<=1.07
         scatter(X(z),Y(z),P(z),C(z),'filled')

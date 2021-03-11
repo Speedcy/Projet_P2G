@@ -17,7 +17,7 @@ cout_ligne_unitaire=0.65; % Cout renforcement ligne pour une section 228mm² (M€/
 cout_transfo_unitaire=0.14; % Cout renforcement transfo (M€/MVA)
 puissance_max_ptg=40.0;
 modif_ligne=1; % 0: sans modification des paramètres de lignes 1: avec modification
-affichage_detail=1; % 0: affichage itération initiale et finale 1: affichage détaillé de toutes les itérations
+affichage_detail=0; % 0: affichage itération initiale et finale 1: affichage détaillé de toutes les itérations
 
 %Generate Monte-Carlo season
 season = 0%randi([0 1]);%0-Winter; 1-Summer
@@ -97,6 +97,9 @@ mpc.gen(5,PG) = alpha*mpc.gen(5,PMAX);
 mpc.gen(6,PG) = alpha*mpc.gen(6,PMAX);
 mpc.gen(7,PG) = alpha*mpc.gen(7,PMAX);
 mpc.gen(8,PG) = alpha*mpc.gen(8,PMAX);
+
+mpc_original=mpc;
+mpc2=mpc;
 
 disp('===========================================')
 disp('Simulation générée')
@@ -306,6 +309,7 @@ while sum(I>I_nom)>0 % Si congestion càd si une des branches a un courant supéri
         % modification des réactances de ligne (non implémenté)
         result = runpf(mpc); % simulation avec les nouveaux paramètres de ligne
         ajustement_tension % ajustement de la puissance réactive pour la nouvelle simulation
+        %result = runpf(mpc);
         pertes=result.branch(:,PF)+result.branch(:,PT);
         I=((pertes*10^6)./(mpc.branch(:,BR_R)*81)).^(0.5)/3; % calcul des nouveaux courants de ligne
     end
@@ -363,14 +367,14 @@ end
 C_P2G=C_mery;
 num_P2G=7;
 
-mpc.bus(num_P2G,PD) = beta*C_P2G+power_ptg;
-mpc.bus(num_P2G,QD) = mpc.bus(num_P2G,PD)*tan(acos(cos_phi));
+mpc2.bus(num_P2G,PD) = beta*C_P2G+power_ptg;
+mpc2.bus(num_P2G,QD) = mpc2.bus(num_P2G,PD)*tan(acos(cos_phi));
 
-mpc.branch(:,3)=r_ligne_init; % Réinitialisation des résistances de lignes
+%mpc.branch(:,3)=r_ligne_init; % Réinitialisation des résistances de lignes
 % Idem réactances
 
 
-result2 = runpf(mpc); %Run
+result2 = runpf(mpc2); %Run
 
 disp('===========================================')
 disp('Simulation générée')
@@ -401,9 +405,9 @@ surplus2 = -result2.gen(1,PG);
 disp(['Surplus électrique (MW) = ', num2str(surplus2)])
 
 pertes2=result2.branch(:,PF)+result2.branch(:,PT);
-I2=((pertes2*10^6)./(mpc.branch(:,BR_R)*81)).^(0.5)/3;
+I2=((pertes2*10^6)./(mpc2.branch(:,BR_R)*81)).^(0.5)/3;
 
-L_ligne=mpc.branch(:,3)/0.0018; % longueur des lignes
+L_ligne=mpc2.branch(:,3)/0.0018; % longueur des lignes
 r_ligne=0.0018*ones(length(I2),1);
 I_nom=max_I(season+1)*ones(length(I2),1); % courant nominal de ligne
 %lignes_data=readtable('data_lignes.csv');
@@ -451,13 +455,13 @@ while sum(I2>I_nom)>0 % Si congestion
     r_ligne(i)=ligne_sup(1,2);
     
     if modif_ligne==1
-        mpc.branch(:,3)=L_ligne.*r_ligne; % modification des résistances de ligne
+        mpc2.branch(:,3)=L_ligne.*r_ligne; % modification des résistances de ligne
         % modification des réactances de ligne
-        result2 = runpf(mpc); % simulation avec les nouveaux paramètres de ligne
-        ajustement_tension2 % ajustement de la puissance réactive pour la nouvelle simulation
-        %result2 = runpf(mpc); % simulation prenant en compte l'ajustement de tension
+        result2 = runpf(mpc2); % simulation avec les nouveaux paramètres de ligne
+        ajustement_tension22 % ajustement de la puissance réactive pour la nouvelle simulation
+        %result2 = runpf(mpc2);
         pertes2=result2.branch(:,PF)+result2.branch(:,PT);
-        I2=((pertes2*10^6)./(mpc.branch(:,BR_R)*81)).^(0.5)/3; % calcul des nouveaux courants de ligne
+        I2=((pertes2*10^6)./(mpc2.branch(:,BR_R)*81)).^(0.5)/3; % calcul des nouveaux courants de ligne
     end
 end
 
@@ -501,6 +505,23 @@ disp(strcat("Pourcentage de production éolienne écrétée : ",num2str(100*(1-ecret
 disp(strcat("Puissance max P2G : ",num2str(puissance_max_ptg)," MW"))
 disp(strcat("Cout renforcement ligne section 228 mm² : ",num2str(cout_ligne_unitaire),"M€/km"))
 disp(strcat("Cout renforcement transformateur : ",num2str(cout_transfo_unitaire),"M€/MVA"))
+
+disp(" ")
+disp("<strong>Opérations sur la tension (ajustement de puissance réactive)</strong>")
+disp(" ")
+%point
+% 1: Damery 2: Cubry 3: Vertus 4: Aulnay 5: Fère 6: Arcis 7: Méry 8:
+% Sézanne
+name=["Damery" "Cubry" "Vertus" "Aulnay" "Fère" "Arcis" "Méry" "Sézanne"];
+Q_modif=(mpc2.gen(:,3)-mpc_original.gen(:,3));
+for i=1:length(Q_modif)
+    ecart_Q=Q_modif(i);
+    if ecart_Q>0
+        disp(strcat("Puissance réactive augmentée de ",num2str(ecart_Q)," MVar à ",name(i)))
+    elseif ecart_Q<0
+        disp(strcat("Puissance réactive diminuée de ",num2str(ecart_Q)," MVar à ",name(i)))
+    end
+end
 
 disp(" ")
 disp("<strong>Renforcement des lignes du réseau</strong>")
