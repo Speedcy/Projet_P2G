@@ -314,9 +314,9 @@ while sum(I>I_nom)>0 % Si congestion càd si une des branches a un courant supéri
         I=((pertes*10^6)./(mpc.branch(:,BR_R)*81)).^(0.5)/3; % calcul des nouveaux courants de ligne
     end
 end
-
-I_nom = solve_overdim(I,I_nom,lignes_data.I_max);
+I_nom = solve_overdim(I,I_nom,I_max)
     
+
 plot_reseau
 title('Schema Final : Sans P2G')
 for j=1:length(I)
@@ -467,8 +467,6 @@ while sum(I2>I_nom)>0 % Si congestion
     end
 end
 
-I_nom = solve_overdim(I2,I_nom,lignes_data.I_max);
-
 plot_reseau
 title('Schema Final : Avec P2G')
 scatter(X(num_P2G),Y(num_P2G),power_ptg*a_conso+b_conso,'blue','filled')
@@ -517,22 +515,13 @@ disp(" ")
 % 1: Damery 2: Cubry 3: Vertus 4: Aulnay 5: Fère 6: Arcis 7: Méry 8:
 % Sézanne
 name=["Damery" "Cubry" "Vertus" "Aulnay" "Fère" "Arcis" "Méry" "Sézanne"];
-Q_modif=(mpc.gen(:,3)-mpc_original.gen(:,3));
-for i=1:length(Q_modif)
-    ecart_Q=Q_modif(i);
-    if ecart_Q>0
-        disp(strcat("Simulation sans P2G : Puissance réactive augmentée de ",num2str(ecart_Q)," MVar à ",name(i)))
-    elseif ecart_Q<0
-        disp(strcat("Simulation sans P2G : Puissance réactive diminuée de ",num2str(ecart_Q)," MVar à ",name(i)))
-    end
-end
 Q_modif=(mpc2.gen(:,3)-mpc_original.gen(:,3));
 for i=1:length(Q_modif)
     ecart_Q=Q_modif(i);
     if ecart_Q>0
-        disp(strcat("Simulation avec P2G : Puissance réactive augmentée de ",num2str(ecart_Q)," MVar à ",name(i)))
+        disp(strcat("Puissance réactive augmentée de ",num2str(ecart_Q)," MVar à ",name(i)))
     elseif ecart_Q<0
-        disp(strcat("Simulation avec P2G : Puissance réactive diminuée de ",num2str(ecart_Q)," MVar à ",name(i)))
+        disp(strcat("Puissance réactive diminuée de ",num2str(ecart_Q)," MVar à ",name(i)))
     end
 end
 
