@@ -17,7 +17,9 @@ cout_ligne_unitaire=0.65; % Cout renforcement ligne pour une section 228mm² (M€/
 cout_transfo_unitaire=0.14; % Cout renforcement transfo (M€/MVA)
 puissance_max_ptg=40.0;
 modif_ligne=1; % 0: sans modification des paramètres de lignes 1: avec modification
-affichage_detail=0; % 0: affichage itération initiale et finale 1: affichage détaillé de toutes les itérations
+affichage_detail=2; % 0: affichage courant itération initiale et finale 
+                    % 1: affichage des courants pour toutes les itérations
+                    % 2: affichage des courants et des tensions pour toutes les itérations
 
 %Generate Monte-Carlo season
 season = 0%randi([0 1]);%0-Winter; 1-Summer
@@ -281,12 +283,13 @@ for j=1:length(congestion)
     end
 end
 
+iteration=0;
 while sum(I>I_nom)>0 % Si congestion càd si une des branches a un courant supérieur à la valeur du courant nominal
     disp('')
     disp('Congestion sur le reseau')
-    if affichage_detail==1
+    if affichage_detail>0
         plot_reseau
-        title('Sans P2G')
+        title(strcat("Sans P2G (Iteration ",num2str(iteration),")"))
         congestion=I>I_nom;
         for j=1:length(congestion)
             if congestion(j)==1
@@ -308,11 +311,16 @@ while sum(I>I_nom)>0 % Si congestion càd si une des branches a un courant supéri
         mpc.branch(:,3)=L_ligne.*r_ligne; % modification des résistances de ligne
         % modification des réactances de ligne (non implémenté)
         result = runpf(mpc); % simulation avec les nouveaux paramètres de ligne
+        if affichage_detail==2
+            plot_plan_tension_v2(result,strcat("Sans P2G (Iteration ",num2str(iteration),")"),VM)
+        end
         ajustement_tension % ajustement de la puissance réactive pour la nouvelle simulation
         %result = runpf(mpc);
         pertes=result.branch(:,PF)+result.branch(:,PT);
         I=((pertes*10^6)./(mpc.branch(:,BR_R)*81)).^(0.5)/3; % calcul des nouveaux courants de ligne
     end
+   
+    iteration=iteration+1;
 end
 
 I_nom = solve_overdim(I,I_nom,lignes_data.I_max);
@@ -432,12 +440,13 @@ for j=1:length(congestion)
     end
 end
 
+iteration=0;
 while sum(I2>I_nom)>0 % Si congestion
     disp('')
     disp('Congestion sur le reseau')
-    if affichage_detail==1
+    if affichage_detail>0
         plot_reseau
-        title('Avec P2G')
+        title(strcat("Avec P2G (Iteration ",num2str(iteration),")"))
         scatter(X(num_P2G),Y(num_P2G),power_ptg*a_conso+b_conso,'blue','filled')
         text(2-2.1,0, strcat(['P2G (',num2str(round(power_ptg,1)),' MW)']),'Color','blue')
         congestion=I2>I_nom;
@@ -460,11 +469,15 @@ while sum(I2>I_nom)>0 % Si congestion
         mpc2.branch(:,3)=L_ligne.*r_ligne; % modification des résistances de ligne
         % modification des réactances de ligne
         result2 = runpf(mpc2); % simulation avec les nouveaux paramètres de ligne
+        if affichage_detail==2
+            plot_plan_tension_v2(result2,strcat("Avec P2G (Iteration ",num2str(iteration),")"),VM)
+        end
         ajustement_tension22 % ajustement de la puissance réactive pour la nouvelle simulation
         %result2 = runpf(mpc2);
         pertes2=result2.branch(:,PF)+result2.branch(:,PT);
         I2=((pertes2*10^6)./(mpc2.branch(:,BR_R)*81)).^(0.5)/3; % calcul des nouveaux courants de ligne
     end
+    iteration=iteration+1;
 end
 
 I_nom = solve_overdim(I2,I_nom,lignes_data.I_max);
