@@ -9,13 +9,13 @@ mpc = loadcase('etudeaffinepq');%load the case format
 cos_phi = 0.9;%cos(phi) of the electrical load of the network
 
 %mpc.branch(:,4)=mpc.branch(:,4)*0.0048/0.0082;
-r_ligne_init=mpc.branch(:,3);
+%r_ligne_init=mpc.branch(:,3);
 
 margin=0.1;
 ecretement=1; % Production effectivement injectée sur le réseau, le reste étant écrété (1=100%, 0.5=50%...)
 cout_ligne_unitaire=0.65; % Cout renforcement ligne pour une section 228mm² (M€/km) 
 cout_transfo_unitaire=0.14; % Cout renforcement transfo (M€/MVA)
-puissance_max_ptg=40.0;
+puissance_max_ptg=100.0;
 modif_ligne=1; % 0: sans modification des paramètres de lignes 1: avec modification
 affichage_detail=2; % 0: affichage courant itération initiale et finale 
                     % 1: affichage des courants pour toutes les itérations
@@ -331,7 +331,6 @@ for j=1:length(I)
     text(value_plot_x(j),value_plot_y(j),strcat(num2str(round(I(j))),'/',num2str(I_nom(j))))
 end
 
-ajustement_tension
 plot_plan_tension_v2(result,'Sans P2G',VM)
 if sum(result.bus(:,VM)<0.95)+sum(result.bus(:,VM)>1.07)>0
     plan_tension_correct=0;
@@ -413,6 +412,8 @@ disp(['Puissance PtG (MW) = ', num2str(power_ptg)])
 disp(['Perte totale (MW) = ', num2str(loss2)])
 surplus2 = -result2.gen(1,PG);
 disp(['Surplus électrique (MW) = ', num2str(surplus2)])
+
+ajustement_tension22
 
 pertes2=result2.branch(:,PF)+result2.branch(:,PT);
 I2=((pertes2*10^6)./(mpc2.branch(:,BR_R)*81)).^(0.5)/3;
