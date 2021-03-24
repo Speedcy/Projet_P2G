@@ -9,12 +9,17 @@ mpc = loadcase('etudeaffinepq');%load the case format
 cos_phi = 0.9;%cos(phi) of the electrical load of the network
 
 %mpc.branch(:,4)=mpc.branch(:,4)*0.0048/0.0082;
-r_ligne_init=mpc.branch(:,3);
+%r_ligne_init=mpc.branch(:,3);
 
-margin=0.05;
-ecretement=1
-cout_ligne_unitaire=0.65; % Cout renforcement ligne (M€/km)
-modif_ligne=1;
+margin=0.1;
+ecretement=1; % Production effectivement injectée sur le réseau, le reste étant écrété (1=100%, 0.5=50%...)
+cout_ligne_unitaire=0.65; % Cout renforcement ligne pour une section 228mm² (M€/km) 
+cout_transfo_unitaire=0.14; % Cout renforcement transfo (M€/MVA)
+puissance_max_ptg=100.0;
+modif_ligne=1; % 0: sans modification des paramètres de lignes 1: avec modification
+affichage_detail=2; % 0: affichage courant itération initiale et finale 
+                    % 1: affichage des courants pour toutes les itérations
+                    % 2: affichage des courants et des tensions pour toutes les itérations
 
 %Generate Monte-Carlo season
 season = 0%randi([0 1]);%0-Winter; 1-Summer
@@ -26,7 +31,9 @@ reactive_frac=[];
 volt=[];
 tab=[];
 elec_surplus=[];
-max_I=[700 550]; % Maximal current in winter and summer
+
+max_I=[648.6 519.5]; % Maximal current in winter and summer
+plan_tension_correct=1;
 
 %Installed wind power (MW)
 G_damery = 0*ecretement;
@@ -93,6 +100,9 @@ mpc.gen(6,PG) = alpha*mpc.gen(6,PMAX);
 mpc.gen(7,PG) = alpha*mpc.gen(7,PMAX);
 mpc.gen(8,PG) = alpha*mpc.gen(8,PMAX);
 
+mpc_original=mpc;
+mpc2=mpc;
+
 disp('===========================================')
 disp('Simulation générée')
 disp('------------------')
@@ -108,56 +118,59 @@ disp(['Charge gaz normalisée = ', num2str(gamma)])
 % Affichage des lieux de consommation
 
 plot_reseau
-Z=zeros(1,8);
+Z_conso=zeros(1,8);
 for z=1:8
-    Z(z)=mpc.bus(z,PD);
+    Z_conso(z)=mpc.bus(z,PD);
 end
-C=Z;
-P=Z*164/40+36;
+% Taille des points à la bonne échelle
+a_conso=164/40;
+b_conso=36;
+C_conso=Z_conso;
+P_conso=Z_conso*a_conso+b_conso;
 for z=1:8
-    scatter(X(z),Y(z),P(z),C(z),'filled')
-end
-redMap = [ones(256, 1)*255, linspace(200, 25, 256)', linspace(200, 25, 256)']/256;
-colormap(redMap);
-cb=colorbar;
-ylabel(cb,'Consommation (MW)')
-
-title('Lieux de Consommation')
-text(2-1.6,0, strcat([num2str(round(mpc.bus(7,PD),1)),' MW']),'Color','red')
-text(5-1.5,0+0.5, strcat([num2str(round(mpc.bus(6,PD),1)),' MW']),'Color','red')
-text(0+0.5,4-0.4, strcat([num2str(round(mpc.bus(8,PD),1)),' MW']),'Color','red')
-text(4+0.5,5-0.5, strcat([num2str(round(mpc.bus(5,PD),1)),' MW']),'Color','red')
-text(3-1.5,7, strcat([num2str(round(mpc.bus(4,PD),1)),' MW']),'Color','red')
-text(4-1.7,9, strcat([num2str(round(mpc.bus(3,PD),1)),' MW']),'Color','red')
-text(2-1.5,11, strcat([num2str(round(mpc.bus(2,PD),1)),' MW']),'Color','red')
-text(1-1.3,13+0, strcat([num2str(round(mpc.bus(1,PD),1)),' MW']),'Color','red')
-
-% Affichage des lieux de production
-
-plot_reseau
-Z=zeros(1,8);
-for z=1:8
-    Z(z)=mpc.gen(z,PG);
-end
-C=Z;
-P=Z*164/100+36;
-for z=1:8
-    scatter(X(z),Y(z),P(z),C(z),'filled')
+    scatter(X(z),Y(z),P_conso(z),C_conso(z),'filled')
 end
 blueMap = [linspace(200, 25, 256)', linspace(200, 25, 256)', ones(256, 1)*255]/256;
 colormap(blueMap);
 cb=colorbar;
+ylabel(cb,'Consommation (MW)')
+
+title('Lieux de Consommation')
+text(2-1.6,0, strcat([num2str(round(mpc.bus(7,PD),1)),' MW']),'Color','blue')
+text(5-1.5,0+0.5, strcat([num2str(round(mpc.bus(6,PD),1)),' MW']),'Color','blue')
+text(0+0.5,4-0.4, strcat([num2str(round(mpc.bus(8,PD),1)),' MW']),'Color','blue')
+text(4+0.5,5-0.5, strcat([num2str(round(mpc.bus(5,PD),1)),' MW']),'Color','blue')
+text(3-1.5,7, strcat([num2str(round(mpc.bus(4,PD),1)),' MW']),'Color','blue')
+text(4-1.7,9, strcat([num2str(round(mpc.bus(3,PD),1)),' MW']),'Color','blue')
+text(2-1.5,11, strcat([num2str(round(mpc.bus(2,PD),1)),' MW']),'Color','blue')
+text(1-1.3,13+0, strcat([num2str(round(mpc.bus(1,PD),1)),' MW']),'Color','blue')
+
+% Affichage des lieux de production
+
+plot_reseau
+Z_prod=zeros(1,8);
+for z=1:8
+    Z_prod(z)=mpc.gen(z,PG);
+end
+C_prod=Z_prod;
+P_prod=Z_prod*164/100+36;
+for z=1:8
+    scatter(X(z),Y(z),P_prod(z),C_prod(z),'filled')
+end
+redMap = [ones(256, 1)*255, linspace(200, 25, 256)', linspace(200, 25, 256)']/256;
+colormap(redMap);
+cb=colorbar;
 ylabel(cb,'Production (MW)')
 
 title('Lieux de Production')
-text(2-1.6,0, strcat([num2str(round(mpc.gen(7,PG),1)),' MW']),'Color','blue')
-text(5-1.5,0+0.5, strcat([num2str(round(mpc.gen(6,PG),1)),' MW']),'Color','blue')
-text(0+0.5,4-0.4, strcat([num2str(round(mpc.gen(8,PG),1)),' MW']),'Color','blue')
-text(4+0.5,5-0.5, strcat([num2str(round(mpc.gen(5,PG),1)),' MW']),'Color','blue')
-text(3-1.5,7, strcat([num2str(round(mpc.gen(4,PG),1)),' MW']),'Color','blue')
-text(4-1.7,9, strcat([num2str(round(mpc.gen(3,PG),1)),' MW']),'Color','blue')
-text(2-1.5,11, strcat([num2str(round(mpc.gen(2,PG),1)),' MW']),'Color','blue')
-text(1-1.3,13+0, strcat([num2str(round(mpc.gen(1,PG),1)),' MW']),'Color','blue')
+text(2-1.6,0, strcat([num2str(round(mpc.gen(7,PG),1)),' MW']),'Color','red')
+text(5-1.5,0+0.5, strcat([num2str(round(mpc.gen(6,PG),1)),' MW']),'Color','red')
+text(0+0.5,4-0.4, strcat([num2str(round(mpc.gen(8,PG),1)),' MW']),'Color','red')
+text(4+0.5,5-0.5, strcat([num2str(round(mpc.gen(5,PG),1)),' MW']),'Color','red')
+text(3-1.5,7, strcat([num2str(round(mpc.gen(4,PG),1)),' MW']),'Color','red')
+text(4-1.7,9, strcat([num2str(round(mpc.gen(3,PG),1)),' MW']),'Color','red')
+text(2-1.5,11, strcat([num2str(round(mpc.gen(2,PG),1)),' MW']),'Color','red')
+text(1-1.3,13+0, strcat([num2str(round(mpc.gen(1,PG),1)),' MW']),'Color','red')
 
 %---------------------------------------------------------------------
 
@@ -248,8 +261,13 @@ I=((pertes*10^6)./(mpc.branch(:,BR_R)*81)).^(0.5)/3; % courant de lignes
 L_ligne=mpc.branch(:,3)/0.0018; % longueur des lignes
 r_ligne=0.0018*ones(length(I),1);
 I_nom=max_I(season+1)*ones(length(I),1); % courant nominal de ligne
-lignes_data=readtable('data_lignes.csv');
-lignes_data.I_max=max_I(season+1)*(1+lignes_data.EvolutionDeIParRapport_Ref228mm_);
+lignes_data=readtable('data_lignes.csv'); % données sur les lignes de diamètre supérieur à 228mm
+if season==0
+    lignes_data.I_max=lignes_data.Intensit_DeCourantAdmissibleHiver_A_;
+elseif season==1
+    lignes_data.I_max=lignes_data.Intensit_DeCourantAdmissibleEte_A_;
+end
+%lignes_data.I_max=max_I(season+1)*(1+lignes_data.EvolutionDeIParRapport_Ref228mm_);
 
 % Schéma de la situation initiale sans P2G
 
@@ -265,42 +283,58 @@ for j=1:length(congestion)
     end
 end
 
-while sum(I>I_nom)>0 % Si congestion
+iteration=0;
+while sum(I>I_nom)>0 % Si congestion càd si une des branches a un courant supérieur à la valeur du courant nominal
     disp('')
-    disp('Congestion sur le reseau')  
-%     plot_reseau
-%     title('Sans P2G')
-%     congestion=I>I_nom;
-%     for j=1:length(congestion)
-%         if congestion(j)==1
-%             eval(line_plot(j))
-%             text(value_plot_x(j),value_plot_y(j),strcat(num2str(round(I(j))),'/',num2str(I_nom(j))),'color','red')
-%         else
-%             text(value_plot_x(j),value_plot_y(j),strcat(num2str(round(I(j))),'/',num2str(I_nom(j))))
-%         end
-%     end
-    [M,i]=max(I-I_nom); % ligne i a la plus grande congestion
+    disp('Congestion sur le reseau')
+    if affichage_detail>0
+        plot_reseau
+        title(strcat("Sans P2G (Iteration ",num2str(iteration),")"))
+        congestion=I>I_nom;
+        for j=1:length(congestion)
+            if congestion(j)==1
+                eval(line_plot(j))
+                text(value_plot_x(j),value_plot_y(j),strcat(num2str(round(I(j))),'/',num2str(I_nom(j))),'color','red')
+            else
+                text(value_plot_x(j),value_plot_y(j),strcat(num2str(round(I(j))),'/',num2str(I_nom(j))))
+            end
+        end
+    end
+    [M,i]=max(I-I_nom); % Sélection de la ligne qui a la plus grande congestion (ligne i)
+    % Sélection d'une ligne de capacité supérieure et modifcation du
+    % vecteur de résistance linéique
     ligne_sup=[lignes_data.I_max(lignes_data.I_max>I_nom(i)) lignes_data.R_sistanceLin_ique_Ohm_km_(lignes_data.I_max>I_nom(i))/81];
     I_nom(i)=ligne_sup(1,1);
     r_ligne(i)=ligne_sup(1,2);
     
     if modif_ligne==1
         mpc.branch(:,3)=L_ligne.*r_ligne; % modification des résistances de ligne
-        % modification des réactances de ligne
+        % modification des réactances de ligne (non implémenté)
         result = runpf(mpc); % simulation avec les nouveaux paramètres de ligne
+        if affichage_detail==2
+            plot_plan_tension_v2(result,strcat("Sans P2G (Iteration ",num2str(iteration),")"),VM)
+        end
         ajustement_tension % ajustement de la puissance réactive pour la nouvelle simulation
+        %result = runpf(mpc);
         pertes=result.branch(:,PF)+result.branch(:,PT);
         I=((pertes*10^6)./(mpc.branch(:,BR_R)*81)).^(0.5)/3; % calcul des nouveaux courants de ligne
     end
+   
+    iteration=iteration+1;
 end
 
+I_nom = solve_overdim(I,I_nom,lignes_data.I_max);
+    
 plot_reseau
 title('Schema Final : Sans P2G')
 for j=1:length(I)
     text(value_plot_x(j),value_plot_y(j),strcat(num2str(round(I(j))),'/',num2str(I_nom(j))))
 end
 
-plot_plan_tension
+plot_plan_tension_v2(result,'Sans P2G',VM)
+if sum(result.bus(:,VM)<0.95)+sum(result.bus(:,VM)>1.07)>0
+    plan_tension_correct=0;
+end
 plot_diagramme_admissibilite
 
 facteur_cout=zeros(length(I),1);
@@ -311,14 +345,16 @@ end
 
 cout=sum((max_I(season+1)*ones(length(I),1)~=I_nom).*L_ligne.*facteur_cout)*cout_ligne_unitaire;
 
-disp(strcat("Cout des travaux (Sans P2G) : ",num2str(cout)," M€"))
+disp(strcat("Cout des travaux de renforcement de lignes (Sans P2G) : ",num2str(cout)," M€"))
+
+S_damery=(result.branch(1,PF)^2+result.branch(1,QF)^2)^0.5;
 
 I1_nom=I_nom;
 
 %---------------------------------------------------------------------
 
 %Optimisation after adding P2G
-if surplus <= 40.0
+if surplus <= puissance_max_ptg
     if surplus > 0
         power_ptg = surplus;
     end
@@ -326,8 +362,8 @@ if surplus <= 40.0
         power_ptg = 0;
     end
 end
-if surplus > 40.0
-    power_ptg = 40.0;
+if surplus > puissance_max_ptg
+    power_ptg = puissance_max_ptg;
 end
 
 %Add PtG consumption in Fere-C.
@@ -340,13 +376,14 @@ end
 C_P2G=C_mery;
 num_P2G=7;
 
-mpc.bus(num_P2G,PD) = beta*C_P2G+power_ptg;
-mpc.bus(num_P2G,QD) = mpc.bus(num_P2G,PD)*tan(acos(cos_phi));
+mpc2.bus(num_P2G,PD) = beta*C_P2G+power_ptg;
+mpc2.bus(num_P2G,QD) = mpc2.bus(num_P2G,PD)*tan(acos(cos_phi));
 
-mpc.branch(:,3)=r_ligne_init; % Réinitialisation des résistances de lignes
+%mpc.branch(:,3)=r_ligne_init; % Réinitialisation des résistances de lignes
 % Idem réactances
 
-result2 = runpf(mpc); %Run
+
+result2 = runpf(mpc2); %Run
 
 disp('===========================================')
 disp('Simulation générée')
@@ -376,20 +413,24 @@ disp(['Perte totale (MW) = ', num2str(loss2)])
 surplus2 = -result2.gen(1,PG);
 disp(['Surplus électrique (MW) = ', num2str(surplus2)])
 
-pertes2=result2.branch(:,PF)+result2.branch(:,PT);
-I2=((pertes2*10^6)./(mpc.branch(:,BR_R)*81)).^(0.5)/3;
+ajustement_tension22
 
-L_ligne=mpc.branch(:,3)/0.0018; % longueur des lignes
+pertes2=result2.branch(:,PF)+result2.branch(:,PT);
+I2=((pertes2*10^6)./(mpc2.branch(:,BR_R)*81)).^(0.5)/3;
+
+L_ligne=mpc2.branch(:,3)/0.0018; % longueur des lignes
 r_ligne=0.0018*ones(length(I2),1);
 I_nom=max_I(season+1)*ones(length(I2),1); % courant nominal de ligne
-lignes_data=readtable('data_lignes.csv');
-lignes_data.I_max=max_I(season+1)*(1+lignes_data.EvolutionDeIParRapport_Ref228mm_);
+%lignes_data=readtable('data_lignes.csv');
+%lignes_data.I_max=max_I(season+1)*(1+lignes_data.EvolutionDeIParRapport_Ref228mm_);
 
 % Schéma initial avec P2G
 
 plot_reseau
 title('Avec P2G')
-scatter(X(num_P2G),Y(num_P2G),'blue','filled')
+%scatter(X(num_P2G),Y(num_P2G),'blue','filled')
+scatter(X(num_P2G),Y(num_P2G),power_ptg*a_conso+b_conso,'blue','filled')
+text(2-2.1,0, strcat(['P2G (',num2str(round(power_ptg,1)),' MW)']),'Color','blue')
 congestion=I2>I_nom;
 for j=1:length(congestion)
     if congestion(j)==1
@@ -400,19 +441,23 @@ for j=1:length(congestion)
     end
 end
 
+iteration=0;
 while sum(I2>I_nom)>0 % Si congestion
     disp('')
     disp('Congestion sur le reseau')
-    plot_reseau
-    title('Avec P2G')
-    scatter(X(num_P2G),Y(num_P2G),'blue','filled')
-    congestion=I2>I_nom;
-    for j=1:length(congestion)
-        if congestion(j)==1
-            eval(line_plot(j))
-            text(value_plot_x(j),value_plot_y(j),strcat(num2str(round(I2(j))),'/',num2str(I_nom(j))),'color','red')
-        else
-            text(value_plot_x(j),value_plot_y(j),strcat(num2str(round(I2(j))),'/',num2str(I_nom(j))))
+    if affichage_detail>0
+        plot_reseau
+        title(strcat("Avec P2G (Iteration ",num2str(iteration),")"))
+        scatter(X(num_P2G),Y(num_P2G),power_ptg*a_conso+b_conso,'blue','filled')
+        text(2-2.1,0, strcat(['P2G (',num2str(round(power_ptg,1)),' MW)']),'Color','blue')
+        congestion=I2>I_nom;
+        for j=1:length(congestion)
+            if congestion(j)==1
+                eval(line_plot(j))
+                text(value_plot_x(j),value_plot_y(j),strcat(num2str(round(I2(j))),'/',num2str(I_nom(j))),'color','red')
+            else
+                text(value_plot_x(j),value_plot_y(j),strcat(num2str(round(I2(j))),'/',num2str(I_nom(j))))
+            end
         end
     end
     %plot_plan_tension
@@ -422,23 +467,34 @@ while sum(I2>I_nom)>0 % Si congestion
     r_ligne(i)=ligne_sup(1,2);
     
     if modif_ligne==1
-        mpc.branch(:,3)=L_ligne.*r_ligne; % modification des résistances de ligne
+        mpc2.branch(:,3)=L_ligne.*r_ligne; % modification des résistances de ligne
         % modification des réactances de ligne
-        result2 = runpf(mpc); % simulation avec les nouveaux paramètres de ligne
-        %ajustement_tension % ajustement de la puissance réactive pour la nouvelle simulation
+        result2 = runpf(mpc2); % simulation avec les nouveaux paramètres de ligne
+        if affichage_detail==2
+            plot_plan_tension_v2(result2,strcat("Avec P2G (Iteration ",num2str(iteration),")"),VM)
+        end
+        ajustement_tension22 % ajustement de la puissance réactive pour la nouvelle simulation
+        %result2 = runpf(mpc2);
         pertes2=result2.branch(:,PF)+result2.branch(:,PT);
-        I2=((pertes2*10^6)./(mpc.branch(:,BR_R)*81)).^(0.5)/3; % calcul des nouveaux courants de ligne
+        I2=((pertes2*10^6)./(mpc2.branch(:,BR_R)*81)).^(0.5)/3; % calcul des nouveaux courants de ligne
     end
+    iteration=iteration+1;
 end
+
+I_nom = solve_overdim(I2,I_nom,lignes_data.I_max);
 
 plot_reseau
 title('Schema Final : Avec P2G')
-scatter(X(num_P2G),Y(num_P2G),'blue','filled')
+scatter(X(num_P2G),Y(num_P2G),power_ptg*a_conso+b_conso,'blue','filled')
+text(2-2.1,0, strcat(['P2G (',num2str(round(power_ptg,1)),' MW)']),'Color','blue')
 for j=1:length(I)
     text(value_plot_x(j),value_plot_y(j),strcat(num2str(round(I2(j))),'/',num2str(I_nom(j))))
 end
 
-plot_plan_tension
+plot_plan_tension_v2(result2,'Avec P2G',VM)
+if sum(result2.bus(:,VM)<0.95)+sum(result2.bus(:,VM)>1.07)>0
+    plan_tension_correct=0;
+end
 plot_diagramme_admissibilite
 
 %cout_P2G=sum((max_I(season+1)*ones(length(I2),1)~=I_nom).*L_ligne)*0.65;
@@ -451,16 +507,84 @@ end
 
 cout_P2G=sum((max_I(season+1)*ones(length(I2),1)~=I_nom).*L_ligne.*facteur_cout)*cout_ligne_unitaire;
 
-disp(strcat("Cout des travaux (Avec P2G) : ",num2str(cout_P2G)," M€"))
+% Résumé de la simulation 
 
-disp(strcat("Cout des travaux évités par le P2G (marge ",num2str(100*margin),"%) : ",num2str(cout-cout_P2G)," M€"))
+disp(" ")
+disp("<strong>Paramètres de la simulation</strong>")
+disp(" ")
+if season==0
+    disp('Saison : Hiver')
+else
+    disp('Saison : Eté')
+end
+disp(strcat("Marge choisie : ",marge(tranche)))
+disp(strcat("Facteur de charge éolien : ",num2str(100*alpha)," %"))
+disp(strcat("Pourcentage de production éolienne écrétée : ",num2str(100*(1-ecretement))," %"))
+disp(strcat("Puissance max P2G : ",num2str(puissance_max_ptg)," MW"))
+disp(strcat("Cout renforcement ligne section 228 mm² : ",num2str(cout_ligne_unitaire),"M€/km"))
+disp(strcat("Cout renforcement transformateur : ",num2str(cout_transfo_unitaire),"M€/MVA"))
 
+disp(" ")
+disp("<strong>Opérations sur la tension (ajustement de puissance réactive)</strong>")
+disp(" ")
+%point
+% 1: Damery 2: Cubry 3: Vertus 4: Aulnay 5: Fère 6: Arcis 7: Méry 8:
+% Sézanne
+name=["Damery" "Cubry" "Vertus" "Aulnay" "Fère" "Arcis" "Méry" "Sézanne"];
+Q_modif=(mpc.gen(:,3)-mpc_original.gen(:,3));
+for i=1:length(Q_modif)
+    ecart_Q=Q_modif(i);
+    if ecart_Q>0
+        disp(strcat("Simulation sans P2G : Puissance réactive augmentée de ",num2str(ecart_Q)," MVar à ",name(i)))
+    elseif ecart_Q<0
+        disp(strcat("Simulation sans P2G : Puissance réactive diminuée de ",num2str(ecart_Q)," MVar à ",name(i)))
+    end
+end
+Q_modif=(mpc2.gen(:,3)-mpc_original.gen(:,3));
+for i=1:length(Q_modif)
+    ecart_Q=Q_modif(i);
+    if ecart_Q>0
+        disp(strcat("Simulation avec P2G : Puissance réactive augmentée de ",num2str(ecart_Q)," MVar à ",name(i)))
+    elseif ecart_Q<0
+        disp(strcat("Simulation avec P2G : Puissance réactive diminuée de ",num2str(ecart_Q)," MVar à ",name(i)))
+    end
+end
 
-S_damery=(result.branch(1,PF)^2+result.branch(1,QF)^2)^0.5;
+disp(" ")
+disp("<strong>Renforcement des lignes du réseau</strong>")
+disp(" ")
+disp(strcat("Cout des travaux (Sans P2G) : ",num2str(round(cout,2))," M€"))
+disp(strcat("Cout des travaux (Avec P2G) : ",num2str(round(cout_P2G,2))," M€"))
+
+disp(strcat("Cout des travaux évités par le P2G (marge ",num2str(100*margin),"%) : ",num2str(round(cout-cout_P2G,2))," M€"))
+
 S2_damery=(result2.branch(1,PF)^2+result2.branch(1,QF)^2)^0.5;
 
+disp(" ")
+disp("<strong>Renforcement du transformateur de Damery (225kV/63kV)</strong>")
+disp(" ")
 disp(strcat("Puissance apparente au poste de Damery sans P2G : ",num2str(round(S_damery,1))," MVA"))
 disp(strcat("Puissance apparente au poste de Damery avec P2G : ",num2str(round(S2_damery,1))," MVA"))
+
+cout_transfo=(S_damery-S2_damery)*cout_transfo_unitaire;
+
+disp(strcat("Cout des travaux évités par le P2G (marge ",num2str(100*margin),"%) : ",num2str(round(cout_transfo,2))," M€"))
+
+disp(" ")
+
+disp(strcat("<strong>Cout total des travaux évités par le P2G (marge ",num2str(100*margin),"%) : </strong>",num2str(round(cout-cout_P2G+cout_transfo,1))," M€"))
+if plan_tension_correct==0 % Si le plan de tension est incorrect
+    disp('Attention : Plan de tension incorrect !')
+end
+
+% Save Results
+
+A = [puissance_max_ptg; margin; season; alpha; beta; gamma; cout; cout_P2G; cout-cout_P2G; cout_transfo; cout-cout_P2G+cout_transfo];
+A = A';
+file = fopen('save_results_congestion.txt', 'a');
+fprintf(file,'%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\n',A);
+fclose(file);
+
 % Final plot
 
 % plot_reseau
@@ -471,7 +595,8 @@ disp(strcat("Puissance apparente au poste de Damery avec P2G : ",num2str(round(S
 % 
 % plot_reseau
 % title('Schema Final : Avec P2G')
-% scatter(X(num_P2G),Y(num_P2G),'blue','filled')
+% scatter(X(num_P2G),Y(num_P2G),power_ptg*a_conso+b_conso,'blue','filled')
+% text(2-2.1,0, strcat(['P2G (',num2str(round(power_ptg,1)),' MW)']),'Color','blue')
 % for j=1:length(I)
 %     text(value_plot_x(j),value_plot_y(j),strcat(num2str(round(I2(j))),'/',num2str(I_nom(j))))
 % end
