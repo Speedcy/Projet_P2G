@@ -529,7 +529,7 @@ for i=1:length(Q_modif)
     end
     ecart_Q_no_P2G=ecart_Q_no_P2G+abs(ecart_Q);
 end
-
+disp("")
 disp("Simulation avec P2G :")
 Q_modif=(mpc2.gen(:,3)-mpc_original.gen(:,3));
 for i=1:length(Q_modif)
@@ -543,7 +543,7 @@ for i=1:length(Q_modif)
 end
 
 cout_Q=(ecart_Q_no_P2G-ecart_Q_P2G)*cout_Q_unitaire;
-disp(" ")
+
 disp(strcat("Cout des travaux évités par le P2G (marge ",num2str(100*margin),"%) : ",num2str(round(cout_Q,2))," M€"))
 
 disp(" ")
@@ -570,16 +570,14 @@ disp(strcat("Cout des travaux évités par le P2G (marge ",num2str(100*margin),"%)
 
 disp(" ")
 
-cout_total=cout_ligne+cout_transfo+cout_Q;
-
-disp(strcat("<strong>Cout total des travaux évités par le P2G (marge ",num2str(100*margin),"%) : </strong>",num2str(round(cout_total,1))," M€"))
+disp(strcat("<strong>Cout total des travaux évités par le P2G (marge ",num2str(100*margin),"%) : </strong>",num2str(round(cout-cout_P2G+cout_transfo,1))," M€"))
 if plan_tension_correct==0 % Si le plan de tension est incorrect
     disp('Attention : Plan de tension incorrect !')
 end
 
 % Save Results
 
-A = [puissance_max_ptg; margin; season; alpha; beta; gamma; cout; cout_P2G; cout_ligne; cout_transfo; cout_Q; cout_total];
+A = [puissance_max_ptg; margin; season; alpha; beta; gamma; cout; cout_P2G; cout-cout_P2G; cout_transfo; cout-cout_P2G+cout_transfo; ecart_Q_P2G-ecart_Q_no_P2G];
 A = A';
 file = fopen('save_results_congestion.txt', 'a');
 fprintf(file,'%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\n',A);
