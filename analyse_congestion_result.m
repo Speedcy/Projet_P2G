@@ -71,3 +71,15 @@ set(get(get(s,'Annotation'),'LegendInformation'),'IconDisplayStyle','off');
 legend('Données Brutes',strcat(sprintf('a*x (a=%.0f % ',Cout_max_fit.a*1000),' k€/MW)'),'location','north')
 ylim([-1 4])
 
+figure;
+scatter(Results.Puissance_P2G,Results.Cout_min_travaux)
+hold on;
+p1=plot(Cout_min_fit)
+p1.Color = 'c';
+scatter(Results.Puissance_P2G,Results.Cout_moyen_travaux)
+p2=plot(Cout_moyen_fit)
+p2.Color = 'c';
+scatter(Results.Puissance_P2G,Results.Cout_max_travaux)
+p3=plot(Cout_max_fit)
+p3.Color = 'c';
+
