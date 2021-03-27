@@ -72,14 +72,36 @@ legend('Données Brutes',strcat(sprintf('a*x (a=%.0f % ',Cout_max_fit.a*1000),' k
 ylim([-1 4])
 
 figure;
-scatter(Results.Puissance_P2G,Results.Cout_min_travaux)
+color1=[52 131 235]/255;
+color2=[52 222 235]/255;
+color3=[52 235 143]/255;
+color1=[0.4940 0.1840 0.5560];
+color2=[0.9290 0.6940 0.1250];
+color3=[0.8500 0.3250 0.0980];
+marker_size=40;
+p1=plot(Cout_min_fit);
 hold on;
-p1=plot(Cout_min_fit)
-p1.Color = 'c';
-scatter(Results.Puissance_P2G,Results.Cout_moyen_travaux)
-p2=plot(Cout_moyen_fit)
-p2.Color = 'c';
-scatter(Results.Puissance_P2G,Results.Cout_max_travaux)
-p3=plot(Cout_max_fit)
-p3.Color = 'c';
+p1.Color = color1;
+p1.LineStyle='--';
+p1.LineWidth=2;
+s1=scatter(Results.Puissance_P2G,Results.Cout_min_travaux,'+','LineWidth',1.5,'MarkerEdgeColor',color1*0.75);
+p2=plot(Cout_moyen_fit);
+p2.Color = color2;
+p2.LineStyle='--';
+p2.LineWidth=2;
+s2=scatter(Results.Puissance_P2G,Results.Cout_moyen_travaux,'+','LineWidth',1.5,'MarkerEdgeColor',color2*0.75);
+p3=plot(Cout_max_fit);
+p3.Color = color3;
+p3.LineStyle='--';
+p3.LineWidth=2;
+s3=scatter(Results.Puissance_P2G,Results.Cout_max_travaux,'+','LineWidth',1.5,'MarkerEdgeColor',color3*0.75);
+set(gcf,'Color','White')
+set(gca,'FontSize',12)
+xlabel('Puissance unité P2G (MW)')
+ylabel('Bénéfice (M€)')
+title(sprintf("Bénéfice annuel vis à vis du réseau d'une unité P2G \n en fonction de sa puissance"))
+h = get(gca,'Children');
+set(gca,'Children',[h(2) h(1) h(4) h(3) h(6) h(5)])
+
+legend('Min',strcat(sprintf('a*x (a=%.0f % ',Cout_min_fit.a*1000),' k€/MW)'),'Moyenne',strcat(sprintf('a*x (a=%.0f % ',Cout_moyen_fit.a*1000),' k€/MW)'),'Max',strcat(sprintf('a*x (a=%.0f % ',Cout_max_fit.a*1000),' k€/MW)'),'location','northwest')
 
