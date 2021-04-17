@@ -1,4 +1,9 @@
-% function initialisation_matrix
+% Etudier la formation de congestions pour un scénario (Saison, Puissance
+% PtG, marge) dans le cas avec ou sans PtG et déterminer les couts des
+% travaux nécessaires à la résolution des congestions
+
+%% Definition des paramètres initiaux
+
 clear all;
 close all;
 clc;
@@ -8,19 +13,21 @@ define_constants;
 mpc = loadcase('etudeaffinepq');%load the case format
 cos_phi = 0.9;%cos(phi) of the electrical load of the network
 
-margin=0.1;
+margin=0.05; % Valeur de la marge
 ecretement=1; % Production effectivement injectée sur le réseau, le reste étant écrété (1=100%, 0.5=50%...)
 cout_ligne_unitaire=0.65; % Cout renforcement ligne pour une section 228mm² (M€/km) 
 cout_transfo_unitaire=0.14; % Cout renforcement transfo (M€/MVA)
-cout_Q_unitaire=0;
-puissance_max_ptg=100.0;
+cout_Q_unitaire=0; % Cout renforcement puissance réactive (M€/MVA) 
+puissance_max_ptg=40.0; % Puissance de l'unité PtG (MW)
 modif_ligne=1; % 0: sans modification des paramètres de lignes 1: avec modification
-affichage_detail=0; % 0: affichage courant itération initiale et finale 
+affichage_detail=2; % 0: affichage courant itération initiale et finale 
                     % 1: affichage des courants pour toutes les itérations
                     % 2: affichage des courants et des tensions pour toutes les itérations
 
 %Generate Monte-Carlo season
 season = 0%randi([0 1]);%0-Winter; 1-Summer
+
+%% Création du réseau électrique 
 
 %Run parameters
 reactive=[];
@@ -90,8 +97,11 @@ mpc.gen(6,PG) = alpha*mpc.gen(6,PMAX);
 mpc.gen(7,PG) = alpha*mpc.gen(7,PMAX);
 mpc.gen(8,PG) = alpha*mpc.gen(8,PMAX);
 
-mpc_original=mpc;
+% Copies du réseau électrique
+mpc_original=mpc; 
 mpc2=mpc;
+
+%% Résumé des conditions de simulation
 
 disp('===========================================')
 disp('Simulation générée')
@@ -162,12 +172,13 @@ text(4-1.7,9, strcat([num2str(round(mpc.gen(3,PG),1)),' MW']),'Color','red')
 text(2-1.5,11, strcat([num2str(round(mpc.gen(2,PG),1)),' MW']),'Color','red')
 text(1-1.3,13+0, strcat([num2str(round(mpc.gen(1,PG),1)),' MW']),'Color','red')
 
-%---------------------------------------------------------------------
+%% Simulation initiale (sans PtG)
 
 %Matpower running simulation 
 
 result = runpf(mpc); %Run
  
+% Résumé de la simulation
 disp('===========================================')
 disp('Simulation optimisée - No PtG')
 disp('------------------')
@@ -176,50 +187,6 @@ loss = sum(tot);
 disp(['Perte totale (MW) = ', num2str(loss)])
 surplus = -result.gen(1,PG);
 disp(['Surplus électrique (MW) = ', num2str(surplus)])
-
-% Affichage du plan de tension
-
-% plot_reseau
-% Z=zeros(1,8);
-% for z=1:8
-%     Z(z)=result.bus(z,VM);
-% end
-% C=Z*90;
-% P=Z*200/0.12-1483.3;
-% for z=1:8
-%     if 0.95<=Z(z) && Z(z)<=1.07
-%         scatter(X(z),Y(z),P(z),C(z),'filled')
-%     end
-% end
-% cb=colorbar;
-% ylabel(cb,'Voltage (kV)')
-% basse=0;
-% eleve=0;
-% for z=1:8
-%     if Z(z)<0.95
-%         s1=scatter(X(z),Y(z),P(z));
-%         s1.LineWidth = 3;
-%         s1.MarkerEdgeColor = [0.4940 0.1840 0.5560];
-%         s1.MarkerFaceColor = [1 1 1];
-%         liste_basse(1)=s1;
-%         basse=1;
-%     elseif Z(z)>1.07
-%         s2=scatter(X(z),Y(z),P(z));
-%         s2.LineWidth = 3;
-%         s2.MarkerEdgeColor = [0.8500 0.3250 0.0980];
-%         s2.MarkerFaceColor = [1 1 1];
-%         liste_eleve(1)=s2;
-%         eleve=1;
-%     end
-% end
-% if basse==1 && eleve==1
-%     legend([s1 s2],{'Tension trop basse','Tension trop élevée'})
-% elseif basse==1
-%     legend([s1],{'Tension trop basse'})
-% elseif eleve==1
-%     legend([s2],{'Tension trop élevée'})
-% end
-
 
 %Diagramme d'admissibilité
 
@@ -245,11 +212,13 @@ ajustement_tension
 %     ylabel('U/Unom')
 % end
 
-pertes=result.branch(:,PF)+result.branch(:,PT);
+%% Etude des congestions (sans PtG)
+
+pertes=result.branch(:,PF)+result.branch(:,PT); % pertes sur les lignes
 I=((pertes*10^6)./(mpc.branch(:,BR_R)*81)).^(0.5)/3; % courant de lignes
 
 L_ligne=mpc.branch(:,3)/0.0018; % longueur des lignes
-r_ligne=0.0018*ones(length(I),1);
+r_ligne=0.0018*ones(length(I),1); % résistance de ligne
 I_nom=max_I(season+1)*ones(length(I),1); % courant nominal de ligne
 lignes_data=readtable('data_lignes.csv'); % données sur les lignes de diamètre supérieur à 228mm
 if season==0
@@ -340,7 +309,7 @@ S_damery=(result.branch(1,PF)^2+result.branch(1,QF)^2)^0.5;
 
 I1_nom=I_nom;
 
-%---------------------------------------------------------------------
+%% Ajout de l'unité PtG
 
 %Optimisation after adding P2G
 if surplus <= puissance_max_ptg
@@ -367,6 +336,8 @@ num_P2G=7;
 
 mpc2.bus(num_P2G,PD) = beta*C_P2G+power_ptg;
 mpc2.bus(num_P2G,QD) = mpc2.bus(num_P2G,PD)*tan(acos(cos_phi));
+
+%% Simulation initiale (avec PtG)
 
 result2 = runpf(mpc2); %Run
 
@@ -399,6 +370,8 @@ surplus2 = -result2.gen(1,PG);
 disp(['Surplus électrique (MW) = ', num2str(surplus2)])
 
 ajustement_tension22
+
+%% Etude des congestions (avec PtG)
 
 pertes2=result2.branch(:,PF)+result2.branch(:,PT);
 I2=((pertes2*10^6)./(mpc2.branch(:,BR_R)*81)).^(0.5)/3;
@@ -492,7 +465,7 @@ end
 
 cout_P2G=sum((max_I(season+1)*ones(length(I2),1)~=I_nom).*L_ligne.*facteur_cout)*cout_ligne_unitaire;
 
-% Résumé de la simulation 
+%% Résumé de la simulation 
 
 disp(" ")
 disp("<strong>Paramètres de la simulation</strong>")
@@ -577,63 +550,10 @@ if plan_tension_correct==0 % Si le plan de tension est incorrect
     disp('Attention : Plan de tension incorrect !')
 end
 
-% Save Results
+%% Save Results
 
 A = [puissance_max_ptg; margin; season; alpha; beta; gamma; cout; cout_P2G; cout_ligne; cout_transfo; cout_Q; cout_total];
 A = A';
 file = fopen('save_results_congestion.txt', 'a');
 fprintf(file,'%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f\n',A);
 fclose(file);
-
-% Final plot
-
-% plot_reseau
-% title('Schema Final : Sans P2G')
-% for j=1:length(I)
-%     text(value_plot_x(j),value_plot_y(j),strcat(num2str(round(I(j))),'/',num2str(I1_nom(j))))
-% end
-% 
-% plot_reseau
-% title('Schema Final : Avec P2G')
-% scatter(X(num_P2G),Y(num_P2G),power_ptg*a_conso+b_conso,'blue','filled')
-% text(2-2.1,0, strcat(['P2G (',num2str(round(power_ptg,1)),' MW)']),'Color','blue')
-% for j=1:length(I)
-%     text(value_plot_x(j),value_plot_y(j),strcat(num2str(round(I2(j))),'/',num2str(I_nom(j))))
-% end
-
-% 
-% line_plot=["plot([1 2],[13 11],'color','red','linewidth',2)" 
-%     "plot([4 2],[9 11],'color','red','linewidth',2)" 
-%     "plot([3 4],[7 9],'color','red','linewidth',2)" 
-%     "plot([3 4],[7 5],'color','red','linewidth',2)" 
-%     "plot([5 4],[0 5],'color','red','linewidth',2)"
-%     "plot([2 5],[0 0],'color','red','linewidth',2)"
-%     "plot([2 0],[0 4],'color','red','linewidth',2)"
-%     "plot([0 4],[4 5],'color','red','linewidth',2)"];
-% 
-% figure()
-% % reseau
-% plot([2 0],[0 4],'color','black')
-% hold on;
-% plot([2 5],[0 0],'color','black')
-% plot([5 4],[0 5],'color','black')
-% plot([0 4],[4 5],'color','black')
-% plot([3 4],[7 5],'color','black')
-% plot([3 4],[7 9],'color','black')
-% plot([4 2],[9 11],'color','black')
-% plot([1 2],[13 11],'color','black')
-% %point
-% X=[2 5 0 4 3 4 2 1];    
-% Y=[0 0 4 5 7 9 11 13];
-% scatter(X,Y,[],'black','filled')
-% %nom
-% text(2+0.2,0+0.5, 'Mery')
-% text(5+0.2,0+0.5, 'Arcis-sur-Aube')
-% text(0,4+1, 'Sézanne')
-% text(4+0.2,5+0.5, 'Fère-Champenoise')
-% text(3+0.4,7, 'Aulnay')
-% text(4+0.2,9+0.5, 'Vertus')
-% text(2+0.2,11+0.5, 'Cubry')
-% text(1+0.2,13+0.5, 'Damery')
-% xlim([-1 8])
-% ylim([-1 15])

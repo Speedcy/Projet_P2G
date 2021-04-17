@@ -1,3 +1,9 @@
+% Ajustement de plan de tension via l’injection de puissance réactive : si
+% la tension d’un nœud du réseau est en dehors de la plage de variation
+% acceptable, la puissance réactive en ce nœud du réseau est ajustée afin
+% d’obtenir un plan de tension convenable.
+% Pour le réseau avec PtG
+
 for z = 0:1:7
     pmax(z+1)=mpc2.gen(z+1,PMAX);
 end

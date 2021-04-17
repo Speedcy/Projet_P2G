@@ -1,7 +1,9 @@
 function [I_nom] = solve_overdim(I,I_nom,I_max)
-% Si la puissance réactive a été ajustée afin d'obtenir un plan de tension
-% valide, il est possible que des lignes ait été surdimensionné
-% Ce script permet de résoudre ces problèmes de surdimensionnement
+% L’ajustement de la puissance réactive pour corriger le plan de tension
+% peut causer des surdimensionnements de certaines lignes sur le réseau
+% (une augmentation de la section d’une ligne peut ne plus être nécessaire
+% suite à une injection de puissance réactive). Ce script permet de
+% résoudre ces problèmes de surdimensionnement.
 
 for i=1:length(I_nom)
     if I_nom(i)~=I_max(1) % Si la ligne a été modifiée

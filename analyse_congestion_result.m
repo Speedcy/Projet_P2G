@@ -1,3 +1,6 @@
+% Permet d’analyser les résultats d’un grand nombre de simulation (qui ont
+% été préalablement calculés à l’aide de launch_etude_congestion.m).
+
 close all
 clear all
 
@@ -21,6 +24,7 @@ for i=1:length(Puissance_P2G)
 end
 
 Results=table(Puissance_P2G, Cout_min_travaux, Cout_moyen_travaux, Cout_max_travaux)
+Results=Results(Results.Puissance_P2G<=100,:);
 
 x_interp=linspace(0,100,101);
 Cout_min_interp=interp1(Results.Puissance_P2G,Results.Cout_min_travaux,x_interp,'spline');

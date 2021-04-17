@@ -1,3 +1,7 @@
+% Détermine les valeurs des paramètres d’entrées d’une simulation que sont :
+% -	Le facteur de charge éolien déterminé à partir de la marge
+% -	La consommation électrique normalisée déterminé à partir de la marge
+% -	La consommation gazière normalisée déterminée à partir d’un tirage aléatoire
 
 marge=["1%" "5%" "10%"];
 limit_elec=[0.01 0.05 0.1];
